@@ -1,3 +1,5 @@
+# vim:ts=4:shiftwidth=4:et:
+
 from planetwars.util import ParsingException, _make_id, SetDict
 from planetwars.fleet import Fleet, Fleets
 from planetwars.planet import Planet, Planets
@@ -72,7 +74,6 @@ class Universe(object):
             return ret[0]
         return Planets()
 
-
     # Shortcut / Convenience properties
     @property
     def my_fleets(self):
@@ -97,6 +98,54 @@ class Universe(object):
     @property
     def not_my_planets(self):
         return self.find_planets(owner=player.NOT_ME)
+
+    def weakest_planets(self, owner, count=1):
+        planets = self.find_planets(owner=owner)
+        if count == 1:
+            res = planets[0]
+            for p in planets:
+                if p.ship_count < res.ship_count:
+                    res = p
+            return [res]
+        elif count != 0:
+            res = []
+            sorted_planets = sorted(planets, key=lambda p : p.ship_count)
+            if count >= len(planets):
+                return sorted_planets
+            return sorted_planets[:count]
+        return []
+
+    @property
+    def my_weakest_planets(self, count):
+        return self.weakest_planets(owner=player.ME, count=count)
+
+    @property
+    def enemies_weakest_planets(self, count):
+        return self.weakest_planets(owner=player.ENEMIES, count=count)
+
+    def strongest_planets(self, owner, count=1):
+        planets = self.find_planets(owner=owner)
+        if count == 1:
+            res = planets[0]
+            for p in planets:
+                if p.ship_count > res.ship_count:
+                    res = p
+            return [res]
+        elif count != 0:
+            res = []
+            sorted_planets = sorted(planets, key=lambda p : p.ship_count, reverse=True)
+            if count >= len(planets):
+                return sorted_planets
+            return sorted_planets[:count]
+        return []
+
+    @property
+    def my_strongest_planets(self, count):
+        return self.strongest_planets(owner=player.ME, count=count)
+
+    @property
+    def enemies_strongest_planets(self, count):
+        return self.strongest_planets(owner=player.ENEMIES, count=count)
 
     def update(self, game_state_line):
         """Update the game state. Gets called from Game."""
