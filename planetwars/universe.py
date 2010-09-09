@@ -100,6 +100,11 @@ class Universe(object):
         return self.find_planets(owner=player.NOT_ME)
 
     def weakest_planets(self, owner, count=1):
+        """
+        Returns a set of `count' planets with the smallest ship_count.
+
+        Returns <Planets> (@see planet.py) objects (a set subclass).
+        """
         planets = self.find_planets(owner=owner)
         if count == 1:
             res = planets[0]
@@ -115,6 +120,7 @@ class Universe(object):
             return sorted_planets[:count]
         return []
 
+    # Shortcut / convenience properties
     @property
     def my_weakest_planets(self, count):
         return self.weakest_planets(owner=player.ME, count=count)
@@ -124,6 +130,11 @@ class Universe(object):
         return self.weakest_planets(owner=player.ENEMIES, count=count)
 
     def strongest_planets(self, owner, count=1):
+        """
+        Returns a set of `count' planets belonging to owner with the biggest ship_count.
+
+        Returns <Planets> (@see planet.py) objects (a set subclass).
+        """
         planets = self.find_planets(owner=owner)
         if count == 1:
             res = planets[0]
@@ -139,6 +150,7 @@ class Universe(object):
             return sorted_planets[:count]
         return []
 
+    # Shortcut / convenience properties
     @property
     def my_strongest_planets(self, count):
         return self.strongest_planets(owner=player.ME, count=count)
