@@ -99,6 +99,10 @@ class Universe(object):
     def not_my_planets(self):
         return self.find_planets(owner=player.NOT_ME)
 
+    @property
+    def all_planets(self):
+        return self.not_my_planets | self.my_planets
+
     def weakest_planets(self, owner, count=1):
         """
         Returns a set of `count' planets with the smallest ship_count.
