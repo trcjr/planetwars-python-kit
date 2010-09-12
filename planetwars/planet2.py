@@ -40,7 +40,6 @@ class Planet2(Planet):
                 second = s[1]
 
                 if winner['ships'] == second['ships']:
-                    planet.owner=player.NOBODY
                     planet.ship_count=0
                 else:
                     planet.owner=winner['player']
