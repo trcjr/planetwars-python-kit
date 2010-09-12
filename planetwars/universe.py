@@ -129,70 +129,6 @@ class Universe(object):
         """Returns all planets *not* belonging to ME."""
         return self.find_planets(owner=player.NOT_ME)
 
-<<<<<<< HEAD
-    @property
-    def all_planets(self):
-        return self.not_my_planets | self.my_planets
-
-    def weakest_planets(self, owner, count=1):
-        """
-        Returns a set of `count' planets with the smallest ship_count.
-
-        Returns <Planets> (@see planet.py) objects (a set subclass).
-        """
-        planets = self.find_planets(owner=owner)
-        if count > 0:
-            res = []
-            sorted_planets = sorted(planets, key=lambda p : p.ship_count)
-            if count >= len(planets):
-                return sorted_planets
-            return sorted_planets[:count]
-        return []
-
-    # Shortcut / convenience properties
-    def my_weakest_planets(self, count):
-        return self.weakest_planets(owner=player.ME, count=count)
-
-    @property
-    def my_weakest_planet(self):
-        return self.my_weakest_planets(1)[0]
-
-    def enemies_weakest_planets(self, count):
-        return self.weakest_planets(owner=player.ENEMIES, count=count)
-
-    @property
-    def enemies_weakest_planet(self):
-        return self.enemies_weakest_planets(1)[0]
-
-    def strongest_planets(self, owner, count=1):
-        """
-        Returns a set of `count' planets belonging to owner with the biggest ship_count.
-
-        Returns <Planets> (@see planet.py) objects (a set subclass).
-        """
-        planets = self.find_planets(owner=owner)
-        if count > 0:
-            sorted_planets = sorted(planets, key=lambda p : p.ship_count, reverse=True)
-            if count >= len(planets):
-                return sorted_planets
-            return sorted_planets[:count]
-        return []
-
-    # Shortcut / convenience properties
-    def my_strongest_planets(self, count):
-        return self.strongest_planets(owner=player.ME, count=count)
-
-    @property
-    def my_strongest_planet(self):
-        return self.my_strongest_planets(1)[0]
-
-    def enemies_strongest_planets(self, count):
-        return self.strongest_planets(owner=player.ENEMIES, count=count)
-
-    @property
-    def enemies_strongest_planet(self):
-        return self.enemies_strongest_planets(1)[0]
-
     def send_fleet(self, source, destination, ship_count):
         log.debug("Sending fleet of %d from %s to %s." % (ship_count, source, destination))
         if isinstance(destination, set):
@@ -201,8 +137,6 @@ class Universe(object):
             return
         source.ship_count -= ship_count
         self.game.send_fleet(source.id, destination.id, ship_count)
-
-
 
     # Internal methods below. You should never need to call any of these yourself.
     #############
