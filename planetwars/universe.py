@@ -5,6 +5,9 @@ from planetwars.fleet import Fleet, Fleets
 from planetwars.planet import Planet, Planets
 from planetwars import player
 from planetwars.player import Players
+from logging import getLogger
+
+log = getLogger(__name__)
 
 class Universe(object):
     """'Main' planetwars object. The Universe knows about all planets and fleets and talks to the Game.
@@ -15,12 +18,17 @@ class Universe(object):
     Example:
     >>> universe.find_fleets(owner=player.ENEMIES, destination=universe.find_planets(owner=player.ME, growth_rate=5))
     This would return all hostile fleets en route to any of 'my' 5-growth planets.
+
+    The game objects are stable. That means you can keep references to Planet and Fleet objects in you own code and
+    they will still be valid in the next turn (although fleets of course will expire once they reach their destination).
     """
 
-    def __init__(self, game):
+    def __init__(self, game, planet_class=Planet, fleet_class=Fleet):
         self.game = game
-        self.planets = {}
-        self.fleets = {}
+        self.planet_class = planet_class
+        self.fleet_class = fleet_class
+        self._planets = {}
+        self._fleets = {}
         self.planet_id_map = {}
         self.planet_id = 0
         self._cache = {
@@ -52,7 +60,7 @@ class Universe(object):
         if ret:
             if len(ret) > 1:
                 return reduce(lambda x, y: x & y, ret[1:], ret[0])
-            return ret[0]
+            return Fleets(ret[0])
         return Fleets()
 
     def find_planets(self, owner=None, growth_rate=None):
@@ -71,34 +79,57 @@ class Universe(object):
         if ret:
             if len(ret) > 1:
                 return ret[0] & ret[1]
-            return ret[0]
+            return Planets(ret[0])
         return Planets()
 
     # Shortcut / Convenience properties
     @property
+    def fleets(self):
+        """Returns all fleets."""
+        return self.find_fleets(owner=player.EVERYBODY)
+
+    # Alias for fleets
+    all_fleets = fleets
+
+    @property
     def my_fleets(self):
+        """Returns all fleets send by ME"""
         return self.find_fleets(owner=player.ME)
 
     @property
     def enemy_fleets(self):
+        """Returnes all fleets send by another player"""
         return self.find_fleets(owner=player.ENEMIES)
 
     @property
+    def planets(self):
+        """All planets."""
+        return self.find_planets(owner=player.EVERYBODY)
+
+    # Alias for planets
+    all_planets = planets
+
+    @property
     def my_planets(self):
+        """Returns all planets belonging to ME."""
         return self.find_planets(owner=player.ME)
 
     @property
     def enemy_planets(self):
+        """Returns all planets belonging to another player."""
         return self.find_planets(owner=player.ENEMIES)
 
     @property
     def nobodies_planets(self):
+        """Returns all planets belonging to NOBODY."""
         return self.find_planets(owner=player.NOBODY)
 
     @property
     def not_my_planets(self):
+        """Returns all planets *not* belonging to ME."""
         return self.find_planets(owner=player.NOT_ME)
 
+<<<<<<< HEAD
     @property
     def all_planets(self):
         return self.not_my_planets | self.my_planets
@@ -162,6 +193,20 @@ class Universe(object):
     def enemies_strongest_planet(self):
         return self.enemies_strongest_planets(1)[0]
 
+    def send_fleet(self, source, destination, ship_count):
+        log.debug("Sending fleet of %d from %s to %s." % (ship_count, source, destination))
+        if isinstance(destination, set):
+            for target in destination:
+                self.game.send_fleet(source.id, target.id, ship_count)
+            return
+        source.ship_count -= ship_count
+        self.game.send_fleet(source.id, destination.id, ship_count)
+
+
+
+    # Internal methods below. You should never need to call any of these yourself.
+    #############
+
     def update(self, game_state_line):
         """Update the game state. Gets called from Game."""
         line = game_state_line.split("#")[0]
@@ -176,8 +221,8 @@ class Universe(object):
             if id in self.planet_id_map:
                 self._update_planet(id, tokens[3:5])
             else:
-                new_planet = Planet(self, self.planet_id, *tokens[1:])
-                self.planets[self.planet_id] = new_planet
+                new_planet = self.planet_class(self, self.planet_id, *tokens[1:])
+                self._planets[self.planet_id] = new_planet
                 self.planet_id_map[id] = self.planet_id
                 self._cache['p']['o'][new_planet.owner].add(new_planet)
                 self._cache['p']['g'][new_planet.growth_rate].add(new_planet)
@@ -185,36 +230,35 @@ class Universe(object):
         elif tokens[0] == "F":
             if len(tokens) != 7:
                 raise ParsingException("Invalid format in gamestate: '%s'" % (game_state_line,))
-            id = _make_id(*tokens[1:5])
-            if id in self.fleets:
-                self.fleets[id].update(tokens[6])
+            id = _make_id(*tokens[1:])
+            if id in self._fleets:
+                pass # (fleets already updated by turn_done)
             else:
-                new_fleet = Fleet(self, id, *tokens[1:])
-                self.fleets[id] = new_fleet
+                new_fleet = self.fleet_class(self, id, *tokens[1:])
+                self._fleets[id] = new_fleet
                 self._cache['f']['o'][new_fleet.owner].add(new_fleet)
                 self._cache['f']['s'][new_fleet.source].add(new_fleet)
                 self._cache['f']['d'][new_fleet.destination].add(new_fleet)
 
     def _update_planet(self, planet_id, values):
-        planet = self.planets[self.planet_id_map[planet_id]]
+        planet = self._planets[self.planet_id_map[planet_id]]
         old_owner = planet.owner
         planet.update(*values)
         if planet.owner != old_owner:
             self._cache['p']['o'][old_owner].remove(planet)
             self._cache['p']['o'][planet.owner].add(planet)
 
-    def send_fleet(self, source, destination, ship_count):
-        if isinstance(destination, set):
-            for target in destination:
-                self.game.send_fleet(source.id, target.id, ship_count)
-            return
-        self.game.send_fleet(source.id, destination.id, ship_count)
-
     def turn_done(self):
-        for id, fleet in self.fleets.items():
-            if fleet.turns_remaining == 1:
+        _fleets = {}
+        for id, fleet in self._fleets.items():
+            fleet.turns_remaining -= 1
+            # Ugh.. Since fleets have no id in the engine we have to make sure they match next turn
+            new_id = _make_id(fleet.owner.id, fleet.ship_count, fleet.source.id, fleet.destination.id, fleet.trip_length, fleet.turns_remaining)
+            if fleet.turns_remaining == 0:
                 self._cache['f']['o'][fleet.owner].remove(fleet)
                 self._cache['f']['s'][fleet.source].remove(fleet)
                 self._cache['f']['d'][fleet.destination].remove(fleet)
-                del self.fleets[id]
+            else:
+                _fleets[new_id] = fleet
+        self._fleets = _fleets
 
