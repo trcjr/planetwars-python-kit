@@ -71,6 +71,9 @@ class Game(object):
                 if sys.stdin.closed:
                     break
                 line = sys.stdin.readline().strip()
+                if line.endswith("go"):
+                    self.universe.update(line[:-2])
+                    line = line[-2:]
                 if line.startswith("go"):
                     self.turn_count += 1
                     log.info("=== TURN START === (Turn no: %d)" % self.turn_count)
