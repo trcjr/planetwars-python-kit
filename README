@@ -1,13 +1,15 @@
-MyBot.py is a sample bot for Planet Wars AI Content challenge.
+This package in an alternative python starter kit for Planet Wars AI Challenge.
 
 http://ai-contest.com/
+
+MyBot.py is a sample bot - feel free to modify and test your changes.
 
 Requirements:
 
 * Python 2.5
 * Java 1.6
 
-[1] To run a game against a DualBot on map 5, do
+[1] To run a game against a DualBot on map 5, run
 
 $ ./dual.sh 5
 
@@ -18,10 +20,13 @@ Take a look at the log: MyBot.log
 
 $ ./batch.sh
 
+This will take a few minutes to run..
 
 [3] To play other people's bots in REAL TIME without having to submit
-your code to the content server, compile TCP.java run
+your code to the contest server, compile TCP.java run
 
 $ javac TCP.java 
 $ ./tcp.sh
 
+See http://www.benzedrine.cx/planetwars/ for more details. 
+Thanks dhartmei for setting up the server!
