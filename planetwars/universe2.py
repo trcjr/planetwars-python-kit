@@ -1,6 +1,8 @@
 # vim:ts=4:shiftwidth=4:et
 
-from planetwars.universe import Universe
+from planetwars.universe import Universe, player
+from planetwars.player import Player
+from copy import deepcopy, copy
 
 class Universe2(Universe):
     def weakest_planets(self, owner, count=1):
@@ -12,7 +14,8 @@ class Universe2(Universe):
         planets = self.find_planets(owner=owner)
         if count > 0:
             res = []
-            sorted_planets = sorted(planets, key=lambda p : p.ship_count)
+            #sorted_planets = sorted(planets, key=lambda p : p.ship_count)
+            sorted_planets = sorted(planets, key=lambda p : (1.0+p.growth_rate)/(1.0+p.ship_count), reverse=True)
             if count >= len(planets):
                 return sorted_planets
             return sorted_planets[:count]
