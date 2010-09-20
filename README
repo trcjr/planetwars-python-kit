@@ -30,3 +30,13 @@ $ ./tcp.sh
 
 See http://www.benzedrine.cx/planetwars/ for more details. 
 Thanks dhartmei for setting up the server!
+
+[4] To replay a game locally after is has been played on the server, run
+replay.sh script and pass game page URL as a parameter. 
+This is very useful for debugging your bot.
+
+$ ./replay.sh http://ai-contest.com/visualizer.php?game_id=4607627
+
+Enjoy, and good luck on the battlefield!
+
+-RebelXT
