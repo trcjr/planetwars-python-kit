@@ -27,17 +27,29 @@ def main(argv):
 
     np = len(data)
 
-    for (turn,f) in enumerate(moves.split(":")):
+    moves = moves.split(":")
+
+    print("# turn 1")
+    for i in xrange(np):
+        x,y,o,n,r = data[i]
+        print("P %s %s %s %s %s" % (x,y,o,n,r))
+    print("go\n")
+
+    for (turn,f) in enumerate(moves):
         print("# turn: %d" % (turn + 2))
         xs = f.split(",")
         for i in xrange(np):
             x,y,o,n,r = data[i]
-            o,n = xs[i].split(".")
+            tmp = xs[i].strip().split(".")
+            if len(tmp) < 2:
+                print "error here: ", xs[i]
+                break
+            o,n = tmp
             print("P %s %s %s %s %s" % (x,y,o,n,r))
         for j in xrange(np,len(xs)):
             u = xs[j].split(".")
             if len(u) != 6:
-                print "er: ", xs[j]
+                #print "er: ", xs[j]
                 continue
             o,n,s,d,t,r = u
             print("F %s %s %s %s %s %s" % (o,n,s,d,t,r))
