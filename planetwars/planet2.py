@@ -4,6 +4,21 @@ from copy import copy
 import player
 
 class Planet2(Planet):
+    
+    def min_distance_to(self, my_planets):
+        """Find planet with minimal distance to self.
+        
+        Return tuple of minimum distance, planet with minimum distance
+        """
+        min_dist = 1e6
+        min_planet = None
+        for p in my_planets:
+            dist = self.distance(p)
+            if dist < min_dist:
+                min_dist = dist
+                min_planet = p
+        return min_dist, min_planet
+
     def in_future(self, turns=1):
         """Calculates state of planet in `turns' turns."""
         planet = copy(self)
