@@ -23,7 +23,9 @@ from player import Player, Players, PLAYER1, PLAYER2, PLAYER3, PLAYER4, ME, NOBO
 from util import Point
 from fleet import Fleet
 from planet import Planet
+from planet2 import Planet2
 from universe import Universe
+from universe2 import Universe2
 from game import Game
 from basebot import BaseBot
 
