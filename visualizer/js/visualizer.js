@@ -11,14 +11,18 @@ var Visualizer = {
     planets: [],
     moves: [],
     dirtyRegions: [],
+    active_planet: -1,
     config : {
       planet_font: 'bold 15px Arial,Helvetica',
       fleet_font: 'normal 12px Arial,Helvetica',
+      planet_id_font: 'bold 12px Arial,Helvetica',
+      planet_id_color: '#090',
       planet_pixels: [10,13,18,21,23,29],
       showFleetText: true,
       display_margin: 50,
       turnsPerSecond: 8,
-      teamColor: ['#455','#c00','#7ac']
+      teamColor: ['#455','#c00','#7ac'],
+      teamColor_disabled: ['#233','#400','#235']
     },
     
     setup: function(data) {
@@ -39,6 +43,9 @@ var Visualizer = {
     
     unitToPixel: function(unit) {
         return this.config.unit_to_pixel * unit;
+    },
+    pixelToUnit: function(pixel) {
+        return pixel / this.config.unit_to_pixel;
     },
     
     drawBackground: function(){
@@ -70,6 +77,8 @@ var Visualizer = {
         
         var planetStats = this.moves[frameNumber].planets;
         var fleets = this.moves[frameNumber].moving;
+        var numShips = [0,0];
+        var production = [0,0];
         
         this.drawBackground();
         
@@ -81,6 +90,11 @@ var Visualizer = {
             planet.owner = planetStats[i].owner;
             planet.numShips = planetStats[i].numShips;
 
+            if ( planet.owner > 0 ) {
+                numShips[planet.owner-1] += planet.numShips;
+                production[planet.owner-1] += planet.growthRate;
+            }
+
             disp_x = this.unitToPixel(planet.x) + this.config.display_margin;
             disp_y = this.unitToPixel(planet.y) + this.config.display_margin;
 
@@ -91,22 +105,41 @@ var Visualizer = {
             ctx.fillStyle = "#000";
             ctx.fill();
 
+            var color = this.config.teamColor[planet.owner];
+            if ( this.active_planet >= 0 && this.active_planet != i ) {
+                color = this.config.teamColor_disabled[planet.owner];
+            }
+
             // Draw circle
             ctx.beginPath();
             ctx.arc(disp_x, this.canvas.height - disp_y, this.config.planet_pixels[planet.growthRate], 0, Math.PI*2, true);
             ctx.closePath();
-            ctx.fillStyle = this.config.teamColor[planet.owner];
+            ctx.fillStyle = color;
             // TODO: hightlight planet when a fleet has reached them
             ctx.fill();
 
             ctx.fillStyle = "#fff";
             ctx.fillText(planet.numShips, disp_x, this.canvas.height - disp_y + 5);
         }
+
+        // display planet ids
+        for(var i = 0; i < this.planets.length; i++) {
+            var planet = this.planets[i];
+            var size = this.config.planet_pixels[planet.growthRate];
+            disp_x = this.unitToPixel(planet.x) + this.config.display_margin;
+            disp_y = this.unitToPixel(planet.y) + this.config.display_margin;
+
+            ctx.font = this.config.planet_id_font;
+            ctx.fillStyle = this.config.planet_id_color;
+            ctx.fillText(i, disp_x + size - 10, this.canvas.height - disp_y - size + 10);
+        }
         
         // Draw Fleets
         this.ctx.font = this.config.fleet_font
         for(var i = 0; i < fleets.length; i++) {
           var fleet = fleets[i];
+
+          numShips[fleet.owner-1] += fleet.numShips;
           
           var progress = (fleet.progress + 1 + (frame - frameNumber)) / (fleet.tripLength + 2);
           fleet.x = fleet.source.x + (fleet.destination.x - fleet.source.x) * progress
@@ -114,8 +147,15 @@ var Visualizer = {
           disp_x = this.unitToPixel(fleet.x) + this.config.display_margin;
           disp_y = this.unitToPixel(fleet.y) + this.config.display_margin;
           
+          var color = this.config.teamColor[fleet.owner];
+          if ( this.active_planet >= 0
+                  && this.active_planet != fleet.destination_id
+                  && this.active_planet != fleet.source_id ) {
+              color = this.config.teamColor_disabled[fleet.owner];
+          }
+          
           // Draw ship
-          ctx.fillStyle = this.config.teamColor[fleet.owner];
+          ctx.fillStyle = color;
           ctx.beginPath();
           ctx.save();
           ctx.translate(disp_x, this.canvas.height - disp_y);
@@ -154,13 +194,35 @@ var Visualizer = {
         }
         
         $(this.canvas).trigger('drawn');
+
+        // update move indicator on chart
+        this.drawChart(frame);
+
+        // update status next to usernames
+        $('.player1Name').html(
+                '<a href="profile.php?user_id=' + Visualizer.playerIds[0] + '">' +
+                Visualizer.players[0] + '</a>' +
+                ' (' + numShips[0] + '/' + production[0] + ')'
+        );
+        $('.player1Name a').css({'color':Visualizer.config.teamColor[1],'text-decoration':'none'})
+        $('.player2Name').html(
+                '<a href="profile.php?user_id=' + Visualizer.playerIds[1] + '">' +
+                Visualizer.players[1] + '</a>' +
+                ' (' + numShips[1] + '/' + production[1] + ')'
+        );
+        $('.player2Name a').css({'color':Visualizer.config.teamColor[2],'text-decoration':'none'})
     },
     
-    drawChart: function(){
+    drawChart: function(frame){
         var canvas = document.getElementById('chart')
         var ctx = canvas.getContext('2d');
+
+        // this allows us to restore scale and translate
+        ctx.restore(); ctx.save();
+
         ctx.scale(1,-1)
         ctx.translate(0,-canvas.height)
+        ctx.clearRect(0,0,canvas.width, canvas.height)
         
         // Total the ship counts
         var mostShips = 100;
@@ -198,7 +260,17 @@ var Visualizer = {
             ctx.arc((j-1)*widthFactor, shipCount*heightFactor, 2, 0, Math.PI*2, true);
             ctx.fill();
         }
-        
+
+        // draw move indicator
+        if ( typeof frame != "undefined" ) {
+            var widthFactor = canvas.width / 200;
+            ctx.strokeStyle = "#666"
+            ctx.fillStyle = "#666";
+            ctx.beginPath();
+            ctx.moveTo(widthFactor * frame, 0);
+            ctx.lineTo(widthFactor * frame, canvas.height);
+            ctx.stroke();
+        }
     },
     
     start: function() {
@@ -296,6 +368,27 @@ var Visualizer = {
             this.moves.push(move);
         }
     },
+
+    updateActivePlanet: function(x,y) {
+        var new_active_planet = -1;
+        x = this.pixelToUnit(x - this.config.display_margin);
+        y = this.pixelToUnit(y - this.config.display_margin);
+        for(var i = 0; i < this.planets.length; i++) {
+            var planet = this.planets[i];
+            var size = this.pixelToUnit(this.config.planet_pixels[planet.growthRate]);
+            var dx = x - planet.x;
+            var dy = y - planet.y;
+            if ( dx*dx + dy*dy < size ) {
+                new_active_planet = i;
+                break;
+            }
+        }
+
+        if ( new_active_planet != this.active_planet ) {
+            this.active_planet = new_active_planet;
+            this.drawFrame(Visualizer.frame);
+        }
+    },
     
     _eof: true
 };
@@ -308,7 +401,9 @@ var ParserUtils = {
             owner: parseInt(data[0]),
             numShips: parseInt(data[1]),
             source: Visualizer.planets[data[2]],
+            source_id: data[2],
             destination: Visualizer.planets[data[3]],
+            destination_id: data[3],
             tripLength: parseInt(data[4]),
             progress: parseInt(data[4] - data[5])
         };
@@ -397,18 +492,42 @@ var ParserUtils = {
             return false;
         }
     })
+
+	var updateMove = function(evt) {
+        var chart = $("#chart");
+        var move = 200 * (evt.pageX - chart.offset().left) / chart.width();
+        Visualizer.setFrame(move);
+        Visualizer.drawFrame(Visualizer.frame);
+        Visualizer.stop();
+        return false;
+	}
+    var moveAction = function(evt) {
+		updateMove(evt);
+        var chart = $("#chart");
+		chart.bind('mousemove.chart', updateMove);
+		$('body').bind('mouseup',function(){
+			chart.unbind('mousemove.chart');
+		});
+    }
+    $("#chart").mousedown(moveAction);
+
+    $('#display').mousemove(function(evt){
+        var display = $(this);
+        var x = evt.pageX - display.offset().left;
+        var y = evt.pageY - display.offset().top;
+
+        Visualizer.updateActivePlanet(x,display.height()-y);
+        return false;
+    });
     
     $('#display').bind('drawn', function(){
       $('#turnCounter').text('Turn: '+Math.floor(Visualizer.frame+1)+' of '+Visualizer.moves.length)
     })
     
-    $('.player1Name').html('<a href="profile.php?user_id=' + Visualizer.playerIds[0] + '">' + Visualizer.players[0] + '</a>')
-    $('.player1Name a').css({'color':Visualizer.config.teamColor[1],'text-decoration':'none'})
-    $('.player2Name').html('<a href="profile.php?user_id=' + Visualizer.playerIds[1] + '">' + Visualizer.players[1] + '</a>')
-    $('.player2Name a').css({'color':Visualizer.config.teamColor[2],'text-decoration':'none'})
     $('.playerVs').text('v.s.')
     $('title').text(Visualizer.players[0]+' v.s. '+Visualizer.players[1]+' - Planet Wars')
     
     Visualizer.start();
     Visualizer.drawChart();
 })(window.jQuery);
+
